@@ -3,7 +3,7 @@
 **Autor**: Hernani de Paula Jorge
 **Sprint**: Engenharia de Dados
 **Matrícula**: 4052023000213
-**Entrega**: 27/09/2026
+
 **Plataforma utilizada**: Databricks Free Edition (Unity Catalog, compute Serverless)
 
 ## Contexto de Negócios e Perguntas (Etapa 2 e 4.1)
