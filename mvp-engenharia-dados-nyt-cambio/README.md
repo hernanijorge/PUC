@@ -8,7 +8,7 @@
 
 ## Contexto de Negócios e Perguntas (Etapa 2 e 4.1)
 
-Este projeto reaproveita o domínio de um trabalho anterior, no qual um investidor fictício (Kevin Koogan) queria entender se notícias do New York Times têm relação com o movimento do dólar americano. Naquele trabalho anterior, a análise foi feita rapidamente em pandas e — como descoberto durante a revisão para este MVP — continha um bug: os dados reais eram carregados, mas em seguida sobrescritos por dados sintéticos (`np.random`), o que invalidava todas as conclusões. Este MVP corrige isso: constrói um pipeline de dados real, em nuvem, com arquitetura em camadas (Bronze/Silver/Gold), a partir de dados efetivamente coletados.
+Este projeto reaproveita o domínio de um trabalho anterior, no qual um investidor (Kevin Koogan) queria entender se notícias do New York Times têm relação com o movimento do dólar americano. Naquele trabalho anterior, a análise foi feita em pandas. Este MVP constrói um pipeline de dados real, em nuvem, com arquitetura em camadas (Bronze/Silver/Gold), a partir de dados efetivamente coletados.
 
 **Problema de negócio**: entender se e como o volume e o sentimento das notícias publicadas pelo New York Times (cobertura geral do jornal, não restrita a economia) se relacionam com o movimento do índice do dólar americano (DXY) e da taxa de câmbio USD/BRL.
 
@@ -23,13 +23,13 @@ Este projeto reaproveita o domínio de um trabalho anterior, no qual um investid
 1. *Artigos do New York Times* — extraídos de um banco de dados MySQL próprio (`nyt_db.nyt_articles`), populado previamente com artigos do NYT. Estrutura bruta (7 colunas, 78.002 linhas): `web_url` (chave natural, URL do artigo), `headline` (título), `snippet` (trecho de abertura), `abstract` (resumo), `published_date` (data/hora de publicação, texto), `byline` (autor), `section` (seção do NYT). **Licença**: dados extraídos originalmente via API do NYT para uso acadêmico/pessoal; não redistribuídos publicamente neste repositório (ver item "Dados" abaixo).
 2. *Cotações de câmbio (DXY e USD/BRL)* — obtidas via biblioteca `yfinance` (tickers `DX-Y.NYB` e `BRL=X`), 426 e 438 linhas respectivamente, colunas Date/Open/High/Low/Close/Volume. **Licença**: dados públicos do Yahoo Finance, acessados via biblioteca de código aberto `yfinance`, para uso pessoal/educacional (não comercial), conforme os termos de uso do Yahoo Finance.
 
-**Sobre o escopo dos dados**: na etapa de Qualidade de Dados (4.5), verificamos a distribuição de seções dos artigos (`GROUP BY section`) e confirmamos que o dataset é um feed de notícias **gerais** do NYT, e não uma coleta filtrada exclusivamente para conteúdo econômico — artigos explicitamente financeiros (Business + Your Money + The Upshot) somam só ~7,3% do total. Por isso, o problema de negócio foi conscientemente formulado em termos de "notícias em geral", e não "notícias econômicas". Detalhes dessa verificação estão na seção de Qualidade de Dados.
+**Sobre o escopo dos dados**: na etapa de Qualidade de Dados (4.5), verifiquei a distribuição de seções dos artigos (`GROUP BY section`) e confirmei que o dataset é um feed de notícias **gerais** do NYT, e não uma coleta filtrada exclusivamente para conteúdo econômico — artigos explicitamente financeiros (Business + Your Money + The Upshot) somam só ~7,3% do total. Por isso, o problema de negócio foi conscientemente formulado em termos de "notícias em geral", e não "notícias econômicas". Detalhes dessa verificação estão na seção de Qualidade de Dados.
 
 **Dados**: não é necessário disponibilizar os arquivos de dados (conforme item 4 do template). O CSV de artigos não é redistribuído por conter dados extraídos de fonte com uso pessoal; as cotações de câmbio podem ser obtidas livremente executando o notebook `02_bronze_cambio`.
 
 ## Carga dos Dados (Etapa 4.2)
 
-**Artigos do NYT**: como o MySQL de origem roda apenas em `localhost` (não acessível pela internet), não foi possível conectar o Databricks diretamente via JDBC. A solução adotada foi exportar a tabela `nyt_db.nyt_articles` para CSV (via MySQL Workbench, usando a exportação do Result Grid para evitar um bug de encoding conhecido da Table Data Export Wizard no Windows) e subir o arquivo para um **Volume do Unity Catalog** (`/Volumes/workspace/default/nyt_articles/`) via `databricks fs cp` (CLI do Databricks, autenticada com `databricks auth login`). O notebook `01_bronze_nyt_mysql` faz a leitura desse CSV a partir do Volume e grava a tabela Delta `bronze_nyt_articles`.
+**Artigos do NYT**: como o MySQL de origem roda apenas em `localhost` (não acessível pela internet), não foi possível conectar o Databricks diretamente via JDBC. A solução adotada foi exportar a tabela `nyt_db.nyt_articles` para CSV (via MySQL Workbench, usando a exportação do Result Grid para evitar um bug de encoding da Table Data Export Wizard no Windows) e subi o arquivo para um **Volume do Unity Catalog** (`/Volumes/workspace/default/nyt_articles/`) via `databricks fs cp` (CLI do Databricks, autenticada com `databricks auth login`). O notebook `01_bronze_nyt_mysql` faz a leitura desse CSV a partir do Volume e grava a tabela Delta `bronze_nyt_articles`.
 
 **Cotações de câmbio**: baixadas diretamente em nuvem, sem passar por armazenamento intermediário — o notebook `02_bronze_cambio` usa `yfinance` para baixar as séries DXY (`DX-Y.NYB`) e USD/BRL (`BRL=X`) e grava as tabelas Delta `bronze_dxy` e `bronze_usdbrl`.
 
@@ -128,8 +128,6 @@ Esse é considerado um resultado honesto e válido para este MVP, e não uma fal
 ![Gráficos de dispersão P1-P4 com correlações](screenshots/analise/correlacoes-graficos.png)
 
 ## Autoavaliação
-
-> Esta seção é pessoal — personalize com sua própria experiência antes de entregar. Alguns pontos de partida, com base no que foi registrado durante o desenvolvimento:
 
 - **Objetivos traçados no início vs. alcançados**: o objetivo era construir um pipeline de dados real (Bronze/Silver/Gold) em nuvem — em vez de uma análise pontual em pandas como no trabalho anterior — e usá-lo para responder P1-P4. O pipeline foi construído e todas as perguntas foram respondidas tecnicamente; o resultado (ausência de correlação significativa) é diferente do que a hipótese original sugeria, mas as perguntas foram, de fato, respondidas.
 - **Principais dificuldades técnicas**: configuração inicial do ambiente (CLI do Databricks no Windows, com `winget` quebrado na máquina), instabilidade do schema das tabelas de câmbio ao longo de várias tentativas (sufixos de ticker do `yfinance` sendo herdados de forma inconsistente), e o próprio processo de exportação de dados do MySQL Workbench (bugs de encoding e de limite de linhas).
