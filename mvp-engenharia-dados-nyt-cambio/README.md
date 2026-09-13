@@ -1,6 +1,6 @@
 # MVP — Engenharia de Dados: Notícias do NYT vs. Câmbio (DXY/USDBRL)
 
-**Autor**: Hernani Jorge
+**Autor**: Hernani de Paula Jorge
 **Curso**: Pós-graduação PUC-Rio
 **Entrega**: 27/09/2026
 **Plataforma utilizada**: Databricks Free Edition (Unity Catalog, compute Serverless)
